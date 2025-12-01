@@ -237,11 +237,7 @@ export function useDigitizer() {
       const availableWidth = container.clientWidth - 40;
       const availableHeight = container.clientHeight - 40;
       let scale;
-      if (img.width > img.height) {
-        scale = availableWidth / img.width;
-      } else {
-        scale = availableHeight / img.height;
-      }
+      scale = availableHeight / img.height;
       const sw = img.width * scale;
       const sh = img.height * scale;
       const ox = (availableWidth - sw) / 2;
