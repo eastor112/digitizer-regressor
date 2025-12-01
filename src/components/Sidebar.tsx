@@ -23,6 +23,7 @@ interface SidebarProps {
   onSelectLine: (id: number) => void;
   onCalculateRegression: () => void;
   onExportCSV: () => void;
+  onConfirmReferences: () => void;
   onReset: () => void;
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
@@ -54,6 +55,7 @@ export function Sidebar({
   onSelectLine,
   onCalculateRegression,
   onExportCSV,
+  onConfirmReferences,
   onReset,
   onUpload,
 }: SidebarProps) {
@@ -90,6 +92,7 @@ export function Sidebar({
             defaultValue={vX1}
             onBlur={(e) => onVX1Change(parseFloat(e.target.value) || 0)}
             className='w-16'
+            disabled={state >= 5}
           />
         </div>
         <div className='flex justify-between items-center'>
@@ -104,6 +107,7 @@ export function Sidebar({
             defaultValue={vX2}
             onBlur={(e) => onVX2Change(parseFloat(e.target.value) || 0)}
             className='w-16'
+            disabled={state >= 5}
           />
         </div>
       </div>
@@ -120,6 +124,7 @@ export function Sidebar({
             defaultValue={vY1}
             onBlur={(e) => onVY1Change(parseFloat(e.target.value) || 0)}
             className='w-16'
+            disabled={state >= 5}
           />
         </div>
         <div className='flex justify-between items-center'>
@@ -134,9 +139,15 @@ export function Sidebar({
             defaultValue={vY2}
             onBlur={(e) => onVY2Change(parseFloat(e.target.value) || 0)}
             className='w-16'
+            disabled={state >= 5}
           />
         </div>
       </div>
+      {state === 4 && (
+        <Button onClick={onConfirmReferences} className='bg-green-500 hover:bg-green-600 mb-4 w-full'>
+          Confirm References
+        </Button>
+      )}
       <div className='bg-white p-3 rounded border mb-4'>
         <h3 className='text-sm font-semibold mb-2'>Lines</h3>
         <div className='flex flex-wrap gap-2 mb-2'>

@@ -19,10 +19,10 @@ function App() {
     vY2,
     openDialog,
     showRedDot,
-    setVX1,
-    setVX2,
-    setVY1,
-    setVY2,
+    handleVX1Change,
+    handleVX2Change,
+    handleVY1Change,
+    handleVY2Change,
     handleImageUpload,
     resetApp,
     handleCanvasClick,
@@ -31,6 +31,7 @@ function App() {
     addLine,
     selectLine,
     delPoint,
+    confirmReferences,
     setOpenDialog,
   } = useDigitizer();
 
@@ -46,14 +47,15 @@ function App() {
         vY2={vY2}
         inputRef={inputRef}
         showRedDot={showRedDot}
-        onVX1Change={setVX1}
-        onVX2Change={setVX2}
-        onVY1Change={setVY1}
-        onVY2Change={setVY2}
+        onVX1Change={handleVX1Change}
+        onVX2Change={handleVX2Change}
+        onVY1Change={handleVY1Change}
+        onVY2Change={handleVY2Change}
         onAddLine={addLine}
         onSelectLine={selectLine}
         onCalculateRegression={calculateRegression}
         onExportCSV={exportCSV}
+        onConfirmReferences={confirmReferences}
         onReset={() => setOpenDialog(true)}
         onUpload={handleImageUpload}
       />

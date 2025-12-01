@@ -138,7 +138,6 @@ export function useDigitizer() {
         break;
       case ST.SET_Y2:
         setPY2({ x, y });
-        setState(ST.COLLECT);
         setShowRedDot(true);
         setTimeout(() => setShowRedDot(false), 7000);
         playBeep();
@@ -418,6 +417,23 @@ export function useDigitizer() {
     setCurrentLineId(id);
   };
 
+  const confirmChangeRef = (newValue: number, setter: (v: number) => void) => {
+    const hasPoints = lines.some(l => l.points.length > 0)
+    if (hasPoints) {
+      if (window.confirm('Changing reference values will clear all collected points. Continue?')) {
+        setLines(prev => prev.map(l => ({ ...l, points: [], regression: null })))
+        setter(newValue)
+      }
+    } else {
+      setter(newValue)
+    }
+  }
+
+  const handleVX1Change = (value: number) => confirmChangeRef(value, setVX1)
+  const handleVX2Change = (value: number) => confirmChangeRef(value, setVX2)
+  const handleVY1Change = (value: number) => confirmChangeRef(value, setVY1)
+  const handleVY2Change = (value: number) => confirmChangeRef(value, setVY2)
+
   const delPoint = (id: number) => {
     setLines(
       lines.map((line) =>
@@ -426,6 +442,10 @@ export function useDigitizer() {
           : line
       )
     );
+  };
+
+  const confirmReferences = () => {
+    setState(ST.COLLECT);
   };
 
   return {
@@ -442,10 +462,10 @@ export function useDigitizer() {
     vY2,
     openDialog,
     showRedDot,
-    setVX1,
-    setVX2,
-    setVY1,
-    setVY2,
+    handleVX1Change,
+    handleVX2Change,
+    handleVY1Change,
+    handleVY2Change,
     handleImageUpload,
     resetApp,
     handleCanvasClick,
@@ -454,6 +474,7 @@ export function useDigitizer() {
     addLine,
     selectLine,
     delPoint,
+    confirmReferences,
     setOpenDialog,
   };
 }
