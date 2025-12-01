@@ -201,7 +201,7 @@ export function Sidebar({
         Reset All
       </Button>
       <div className='text-center text-sm text-gray-600 mt-4'>
-        © 2025 eastor112
+        © 2025 <a href="https://github.com/eastor112" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700">eastor112</a>
       </div>
     </div>
   );
