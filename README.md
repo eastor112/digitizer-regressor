@@ -1,6 +1,6 @@
 # Digitizer Regressor
 
-A web app for digitizing graphs and images, calibrating X and Y axes, capturing data points, and calculating linear regressions.
+A simple web app for digitizing graphs and images, calibrating X and Y axes, capturing data points, and calculating linear regressions.
 
 ## Features
 
