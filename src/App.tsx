@@ -18,6 +18,7 @@ function App() {
     vY1,
     vY2,
     openDialog,
+    showRedDot,
     setVX1,
     setVX2,
     setVY1,
@@ -44,6 +45,7 @@ function App() {
         vY1={vY1}
         vY2={vY2}
         inputRef={inputRef}
+        showRedDot={showRedDot}
         onVX1Change={setVX1}
         onVX2Change={setVX2}
         onVY1Change={setVY1}

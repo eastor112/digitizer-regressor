@@ -14,6 +14,7 @@ interface SidebarProps {
   vY1: number;
   vY2: number;
   inputRef: React.RefObject<HTMLInputElement | null>;
+  showRedDot: boolean;
   onVX1Change: (value: number) => void;
   onVX2Change: (value: number) => void;
   onVY1Change: (value: number) => void;
@@ -28,10 +29,10 @@ interface SidebarProps {
 
 const msgs = [
   'Upload Image',
-  'Click Ref X1',
-  'Click Ref X2',
-  'Click Ref Y1',
-  'Click Ref Y2',
+  'Click on the X1 reference point on the image',
+  'Click on the X2 reference point on the image',
+  'Click on the Y1 reference point on the image',
+  'Click on the Y2 reference point on the image',
   'Capturing Data...',
 ];
 
@@ -44,6 +45,7 @@ export function Sidebar({
   vY1,
   vY2,
   inputRef,
+  showRedDot,
   onVX1Change,
   onVX2Change,
   onVY1Change,
@@ -58,10 +60,11 @@ export function Sidebar({
   return (
     <div className='w-64 bg-gray-100 p-4 flex flex-col overflow-y-auto shadow-lg'>
       <h2 className='text-xl font-semibold mb-4'>Digitizer V2</h2>
-      <Alert className='mb-4'>
+      <Alert className={`mb-4 relative ${state >= 1 && state <= 4 ? 'bg-yellow-100 border-yellow-400 text-yellow-800' : ''}`}>
         <AlertDescription>
           <strong>Step:</strong> {msgs[state]}
         </AlertDescription>
+        {showRedDot && <span className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>}
       </Alert>
       <label className='flex items-center cursor-pointer bg-gray-200 hover:bg-gray-300 p-2 rounded mb-4'>
         <Upload className='mr-2 h-4 w-4' />

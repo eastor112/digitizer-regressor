@@ -22,6 +22,25 @@ export function useDigitizer() {
   const [offsetY, setOffsetY] = useState<number>(0)
   const [scaledWidth, setScaledWidth] = useState<number>(0)
   const [scaledHeight, setScaledHeight] = useState<number>(0)
+  const [showRedDot, setShowRedDot] = useState<boolean>(false)
+
+  const playBeep = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const oscillator = audioContext.createOscillator()
+      const gainNode = audioContext.createGain()
+      oscillator.connect(gainNode)
+      gainNode.connect(audioContext.destination)
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime)
+      oscillator.type = 'sine'
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
+      oscillator.start(audioContext.currentTime)
+      oscillator.stop(audioContext.currentTime + 0.3)
+    } catch (error) {
+      console.warn('Audio not supported:', error)
+    }
+  }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -33,6 +52,7 @@ export function useDigitizer() {
           setImg(image)
           resetApp()
           setState(ST.SET_X1)
+          playBeep()
         }
         image.src = reader.result as string
       }
@@ -67,10 +87,10 @@ export function useDigitizer() {
     const y = (clickY - offsetY) * (img.height / scaledHeight)
 
     switch (state) {
-      case ST.SET_X1: setPX1({ x, y }); setState(ST.SET_X2); break
-      case ST.SET_X2: setPX2({ x, y }); setState(ST.SET_Y1); break
-      case ST.SET_Y1: setPY1({ x, y }); setState(ST.SET_Y2); break
-      case ST.SET_Y2: setPY2({ x, y }); setState(ST.COLLECT); break
+      case ST.SET_X1: setPX1({ x, y }); setState(ST.SET_X2); setShowRedDot(true); setTimeout(() => setShowRedDot(false), 7000); playBeep(); break
+      case ST.SET_X2: setPX2({ x, y }); setState(ST.SET_Y1); setShowRedDot(true); setTimeout(() => setShowRedDot(false), 7000); playBeep(); break
+      case ST.SET_Y1: setPY1({ x, y }); setState(ST.SET_Y2); setShowRedDot(true); setTimeout(() => setShowRedDot(false), 7000); playBeep(); break
+      case ST.SET_Y2: setPY2({ x, y }); setState(ST.COLLECT); setShowRedDot(true); setTimeout(() => setShowRedDot(false), 7000); playBeep(); break
       case ST.COLLECT: addPoint(x, y); break
     }
   }
@@ -299,6 +319,7 @@ export function useDigitizer() {
     vY1,
     vY2,
     openDialog,
+    showRedDot,
     setVX1,
     setVX2,
     setVY1,
