@@ -26,6 +26,12 @@ export default function ExactMix() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [nextId, setNextId] = useState(1);
   const [productAmount, setProductAmount] = useState<number | null>(null);
+  const [productUnits, setProductUnits] = useState<'g' | 'kg' | 'oz' | 'lb'>(
+    'kg',
+  );
+  const [productAmountDisplay, setProductAmountDisplay] = useState<
+    number | null
+  >(null);
   const [desiredComp, setDesiredComp] = useState<Record<string, number>>({});
   const [newCompName, setNewCompName] = useState('');
   const [newCompUnits, setNewCompUnits] = useState<
@@ -93,7 +99,9 @@ export default function ExactMix() {
   }
 
   function finishIngredients() {
-    setProductAmountInput(productAmount !== null ? String(productAmount) : '');
+    setProductAmountInput(
+      productAmountDisplay !== null ? String(productAmountDisplay) : '',
+    );
     setProductAmountDialogOpen(true);
   }
 
@@ -110,7 +118,23 @@ export default function ExactMix() {
       setErrorDialogOpen(true);
       return;
     }
-    setProductAmount(n);
+    let grams = n;
+    switch (productUnits) {
+      case 'kg':
+        grams = n * 1000;
+        break;
+      case 'oz':
+        grams = n * 28.3495;
+        break;
+      case 'lb':
+        grams = n * 453.592;
+        break;
+      case 'g':
+        grams = n;
+        break;
+    }
+    setProductAmount(grams);
+    setProductAmountDisplay(n);
     setProductAmountDialogOpen(false);
   }
 
@@ -309,12 +333,23 @@ export default function ExactMix() {
               Enter how much product will be prepared (in chosen units).
             </DialogDescription>
           </DialogHeader>
-          <div className='mt-2'>
+          <div className='mt-2 flex gap-2'>
             <input
               value={productAmountInput}
               onChange={(e) => setProductAmountInput(e.target.value)}
-              className='border px-2 py-1 rounded w-full'
+              className='border px-2 py-1 rounded flex-1'
+              placeholder='Amount'
             />
+            <select
+              value={productUnits}
+              onChange={(e) => setProductUnits(e.target.value as any)}
+              className='border px-2 py-1 rounded'
+            >
+              <option value='g'>g</option>
+              <option value='kg'>kg</option>
+              <option value='oz'>oz</option>
+              <option value='lb'>lb</option>
+            </select>
           </div>
           <DialogFooter className='mt-4'>
             <button
@@ -363,9 +398,10 @@ export default function ExactMix() {
         finishIngredients={finishIngredients}
       />
 
-      {productAmount !== null && (
+      {productAmountDisplay !== null && (
         <ProductDetailsSection
-          productAmount={productAmount}
+          productAmountDisplay={productAmountDisplay}
+          productUnits={productUnits}
           desiredComp={desiredComp}
           setDesiredComp={setDesiredComp}
           components={components}

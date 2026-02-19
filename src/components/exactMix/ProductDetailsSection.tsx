@@ -3,7 +3,8 @@ import React from 'react';
 type ComponentDef = { name: string; units: string };
 
 interface ProductDetailsSectionProps {
-  productAmount: number | null;
+  productAmountDisplay: number | null;
+  productUnits: string;
   desiredComp: Record<string, number>;
   setDesiredComp: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   components: ComponentDef[];
@@ -14,7 +15,8 @@ interface ProductDetailsSectionProps {
 }
 
 export default function ProductDetailsSection({
-  productAmount,
+  productAmountDisplay,
+  productUnits,
   desiredComp,
   components,
   onDesiredChange,
@@ -22,13 +24,16 @@ export default function ProductDetailsSection({
   setShowSystem,
   assembleModel,
 }: ProductDetailsSectionProps) {
-  if (productAmount === null) return null;
+  if (productAmountDisplay === null) return null;
 
   return (
     <section className='mb-6 bg-white p-4 rounded shadow'>
       <h3 className='font-medium mb-2'>Product details</h3>
       <div className='mb-2'>
-        Preparing: <b>{productAmount}</b>
+        Preparing:{' '}
+        <b>
+          {productAmountDisplay} {productUnits}
+        </b>
       </div>
 
       <div className='mb-2'>
