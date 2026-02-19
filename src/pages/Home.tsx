@@ -19,9 +19,12 @@ export default function Home() {
           >
             Go to Exact Mix
           </Link>
-          <button className="px-6 py-3 bg-gray-700 text-white rounded-lg" disabled>
-            Other apps (coming soon)
-          </button>
+          <Link
+            to="/solver"
+            className="px-6 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-500"
+          >
+            Solver
+          </Link>
         </div>
       </div>
     </div>
