@@ -3,8 +3,25 @@ import { Sidebar } from '@/components/Sidebar';
 import { CanvasArea } from '@/components/CanvasArea';
 import { PointsPanel } from '@/components/PointsPanel';
 import { ResetDialog } from '@/components/ResetDialog';
+import { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 export default function Digitizer() {
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const handleError = (message: string) => {
+    setErrorMessage(message);
+    setErrorDialogOpen(true);
+  };
+
   const {
     canvasRef,
     inputRef,
@@ -33,7 +50,7 @@ export default function Digitizer() {
     delPoint,
     confirmReferences,
     setOpenDialog,
-  } = useDigitizer();
+  } = useDigitizer(handleError);
 
   return (
     <div className="flex w-screen h-screen bg-gray-800">
@@ -79,6 +96,22 @@ export default function Digitizer() {
           setOpenDialog(false);
         }}
       />
+      <Dialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Error</DialogTitle>
+            <DialogDescription>{errorMessage}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              className='px-3 py-1 bg-blue-600 text-white rounded'
+              onClick={() => setErrorDialogOpen(false)}
+            >
+              Close
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

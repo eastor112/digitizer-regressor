@@ -1,4 +1,17 @@
 import { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import ComponentsSection from '@/components/exactMix/ComponentsSection';
+import IngredientsSection from '@/components/exactMix/IngredientsSection';
+import ProductDetailsSection from '@/components/exactMix/ProductDetailsSection';
+import SystemEquationsSection from '@/components/exactMix/SystemEquationsSection';
+import CreateModelSection from '@/components/exactMix/CreateModelSection';
 
 type Ingredient = {
   id: number;
@@ -9,9 +22,7 @@ type Ingredient = {
 type ComponentDef = { name: string; units: string };
 
 export default function ExactMix() {
-  const [components, setComponents] = useState<ComponentDef[]>([
-    { name: 'A', units: 'percent' },
-  ]);
+  const [components, setComponents] = useState<ComponentDef[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [nextId, setNextId] = useState(1);
   const [productAmount, setProductAmount] = useState<number | null>(null);
@@ -28,6 +39,11 @@ export default function ExactMix() {
   const [matrixARaw, setMatrixARaw] = useState<number[][] | null>(null);
   const [vectorB, setVectorB] = useState<number[] | null>(null);
   const [solution, setSolution] = useState<number[] | null>(null);
+  const [productAmountDialogOpen, setProductAmountDialogOpen] = useState(false);
+  const [productAmountInput, setProductAmountInput] = useState('');
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorDialogMessage, setErrorDialogMessage] = useState('');
+  const [showSystem, setShowSystem] = useState(false);
 
   function addComponent(name?: string, units?: string) {
     const compName = (name || `C${components.length + 1}`).trim();
@@ -77,16 +93,25 @@ export default function ExactMix() {
   }
 
   function finishIngredients() {
-    const ans = window.prompt(
-      'How much product (in chosen units) will be prepared?',
-    );
-    if (!ans) return;
+    setProductAmountInput(productAmount !== null ? String(productAmount) : '');
+    setProductAmountDialogOpen(true);
+  }
+
+  function confirmProductAmount() {
+    const ans = productAmountInput;
+    if (!ans) {
+      setErrorDialogMessage('Please enter a valid positive number');
+      setErrorDialogOpen(true);
+      return;
+    }
     const n = parseFloat(ans);
     if (isNaN(n) || n <= 0) {
-      alert('Please enter a valid positive number');
+      setErrorDialogMessage('Please enter a valid positive number');
+      setErrorDialogOpen(true);
       return;
     }
     setProductAmount(n);
+    setProductAmountDialogOpen(false);
   }
 
   function onDesiredChange(component: string, value: number) {
@@ -95,11 +120,13 @@ export default function ExactMix() {
 
   function assembleModel() {
     if (productAmount === null) {
-      alert('Please set product amount first');
+      setErrorDialogMessage('Please set product amount first');
+      setErrorDialogOpen(true);
       return;
     }
     if (ingredients.length === 0) {
-      alert('Please add at least one ingredient');
+      setErrorDialogMessage('Please add at least one ingredient');
+      setErrorDialogOpen(true);
       return;
     }
     // Build matrices. Keep raw A for display (user-entered) and normalized A (per gram) for computation.
@@ -207,17 +234,24 @@ export default function ExactMix() {
   }
 
   function computeModel() {
-    if (!matrixA || !vectorB) return alert('Assemble model first');
+    if (!matrixA || !vectorB) {
+      setErrorDialogMessage('Assemble model first');
+      setErrorDialogOpen(true);
+      return;
+    }
     const A = matrixA;
     const b = vectorB;
     const rows = A.length;
     const cols = A[0].length;
     try {
       if (solver === 'exact') {
-        if (rows !== cols)
-          return alert(
+        if (rows !== cols) {
+          setErrorDialogMessage(
             'Exact solver requires a square system (components+total === ingredients)',
           );
+          setErrorDialogOpen(true);
+          return;
+        }
         const sol = solveLinear(A, b);
         setSolution(sol);
         return;
@@ -237,10 +271,14 @@ export default function ExactMix() {
         return;
       }
       if (solver === 'nnls') {
-        alert('NNLS solver not implemented yet');
+        setErrorDialogMessage('NNLS solver not implemented yet');
+        setErrorDialogOpen(true);
       }
     } catch (err: any) {
-      alert('Error computing solution: ' + (err?.message || String(err)));
+      setErrorDialogMessage(
+        'Error computing solution: ' + (err?.message || String(err)),
+      );
+      setErrorDialogOpen(true);
     }
   }
 
@@ -248,314 +286,118 @@ export default function ExactMix() {
     <div className='p-6 min-h-screen bg-gray-50'>
       <h2 className='text-2xl font-semibold mb-4'>Go to Exact Mix</h2>
 
-      <section className='mb-6 bg-white p-4 rounded shadow'>
-        <h3 className='font-medium mb-2'>Components</h3>
-        <div className='flex gap-2 items-center mb-2'>
-          <input
-            placeholder='component name'
-            value={newCompName}
-            onChange={(e) => setNewCompName(e.target.value)}
-            className='border px-2 py-1 rounded'
-          />
-          <select
-            value={newCompUnits}
-            onChange={(e) => setNewCompUnits(e.target.value as any)}
-            className='border px-2 py-1 rounded w-32'
-          >
-            <option value='percent'>% (g/100g)</option>
-            <option value='g/kg'>g/kg</option>
-            <option value='g/g'>g/g (fraction)</option>
-            <option value='mg/kg'>mg/kg (ppm)</option>
-            <option value='ppb'>ppb</option>
-            <option value='unitless'>unitless</option>
-          </select>
-          <button
-            className='px-3 py-1 bg-blue-600 text-white rounded'
-            onClick={() => {
-              const val = newCompName.trim();
-              if (!val) return;
-              addComponent(val, newCompUnits.trim());
-              setNewCompName('');
-              setNewCompUnits('percent');
-            }}
-          >
-            Add component
-          </button>
-          <button
-            className='px-3 py-1 bg-gray-200 rounded'
-            onClick={() => addComponent()}
-          >
-            Auto add
-          </button>
-        </div>
+      <ComponentsSection
+        components={components}
+        setComponents={setComponents}
+        newCompName={newCompName}
+        setNewCompName={setNewCompName}
+        newCompUnits={newCompUnits}
+        setNewCompUnits={setNewCompUnits}
+        addComponent={addComponent}
+        removeComponent={removeComponent}
+      />
 
-        <div className='flex gap-2 flex-wrap'>
-          {components.map((c) => (
-            <div
-              key={c.name}
-              className='flex items-center gap-2 bg-gray-100 px-2 py-1 rounded'
-            >
-              <span className='font-medium'>
-                {c.name}{' '}
-                <span className='text-xs text-gray-500'>
-                  (
-                  {c.units === 'percent'
-                    ? '%'
-                    : c.units === 'g/100g'
-                      ? 'g/100g'
-                      : c.units === 'g/kg'
-                        ? 'g/kg'
-                        : c.units === 'g/g'
-                          ? 'g/g'
-                          : c.units === 'mg/kg'
-                            ? 'mg/kg'
-                            : c.units === 'ppb'
-                              ? 'ppb'
-                              : 'unitless'}
-                  )
-                </span>
-              </span>
-              <button
-                className='text-sm text-red-600'
-                onClick={() => removeComponent(c.name)}
-              >
-                remove
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className='mb-6 bg-white p-4 rounded shadow'>
-        <h3 className='font-medium mb-2'>Ingredients</h3>
-        <div className='overflow-auto'>
-          <table className='w-full table-auto border-collapse'>
-            <thead>
-              <tr className='text-left'>
-                <th className='p-2 border-b'>Name</th>
-                {components.map((c) => (
-                  <th key={c.name} className='p-2 border-b'>
-                    {c.name}{' '}
-                    <span className='text-xs text-gray-500'>({c.units})</span>
-                  </th>
-                ))}
-                <th className='p-2 border-b'>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ingredients.map((ing) => (
-                <tr key={ing.id}>
-                  <td className='p-2 border-b'>
-                    <input
-                      value={ing.name}
-                      onChange={(e) =>
-                        updateIngredient(ing.id, { name: e.target.value })
-                      }
-                      className='border px-2 py-1 rounded w-full'
-                    />
-                  </td>
-                  {components.map((c) => (
-                    <td key={c.name} className='p-2 border-b'>
-                      <input
-                        type='number'
-                        value={ing.composition[c.name] ?? 0}
-                        onChange={(e) => {
-                          const v = parseFloat(e.target.value) || 0;
-                          updateIngredient(ing.id, {
-                            composition: { ...ing.composition, [c.name]: v },
-                          });
-                        }}
-                        className='border px-2 py-1 rounded w-full'
-                      />
-                    </td>
-                  ))}
-                  <td className='p-2 border-b'>
-                    <button
-                      className='px-2 py-1 bg-red-600 text-white rounded'
-                      onClick={() => removeIngredient(ing.id)}
-                    >
-                      Remove
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className='mt-3 flex gap-2'>
-          <button
-            className='px-4 py-2 bg-green-600 text-white rounded'
-            onClick={addIngredient}
-          >
-            Add ingredient
-          </button>
-          <button
-            className='px-4 py-2 bg-indigo-600 text-white rounded'
-            onClick={finishIngredients}
-          >
-            Done ingredients
-          </button>
-        </div>
-      </section>
-
-      {productAmount !== null && (
-        <section className='mb-6 bg-white p-4 rounded shadow'>
-          <h3 className='font-medium mb-2'>Product details</h3>
-          <div className='mb-2'>
-            Preparing: <b>{productAmount}</b>
-          </div>
-
-          <div className='mb-2'>
-            Desired composition (enter values for each component)
-          </div>
-          <div className='grid grid-cols-2 gap-2 max-w-md'>
-            {components.map((c) => (
-              <div key={c.name} className='flex items-center gap-2'>
-                <label className='w-20'>{c.name}</label>
-                <input
-                  type='number'
-                  value={desiredComp[c.name] ?? ''}
-                  onChange={(e) =>
-                    onDesiredChange(c.name, parseFloat(e.target.value) || 0)
-                  }
-                  className='border px-2 py-1 rounded w-full'
-                />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {productAmount !== null && (
-        <section className='mb-6 bg-white p-4 rounded shadow'>
-          <h3 className='font-medium mb-2'>Create model</h3>
-          <div className='flex items-center gap-2 mb-3'>
+      {/* Product amount dialog */}
+      <Dialog
+        open={productAmountDialogOpen}
+        onOpenChange={setProductAmountDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set product amount</DialogTitle>
+            <DialogDescription>
+              Enter how much product will be prepared (in chosen units).
+            </DialogDescription>
+          </DialogHeader>
+          <div className='mt-2'>
             <input
-              placeholder='model name'
-              value={modelName}
-              onChange={(e) => setModelName(e.target.value)}
-              className='border px-2 py-1 rounded'
+              value={productAmountInput}
+              onChange={(e) => setProductAmountInput(e.target.value)}
+              className='border px-2 py-1 rounded w-full'
             />
-            <select
-              value={solver}
-              onChange={(e) => setSolver(e.target.value as any)}
-              className='border px-2 py-1 rounded'
+          </div>
+          <DialogFooter className='mt-4'>
+            <button
+              className='px-3 py-1 bg-gray-200 rounded mr-2'
+              onClick={() => setProductAmountDialogOpen(false)}
             >
-              <option value='exact'>Exact (square)</option>
-              <option value='least-squares'>Least-squares</option>
-              <option value='nnls'>
-                Non-negative least-squares (not implemented)
-              </option>
-            </select>
+              Cancel
+            </button>
             <button
               className='px-3 py-1 bg-blue-600 text-white rounded'
-              onClick={assembleModel}
+              onClick={confirmProductAmount}
             >
-              Assemble model
+              Confirm
             </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Error dialog */}
+      <Dialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Error</DialogTitle>
+            <DialogDescription>{errorDialogMessage}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
             <button
-              className='px-3 py-1 bg-green-600 text-white rounded'
-              onClick={computeModel}
+              className='px-3 py-1 bg-blue-600 text-white rounded'
+              onClick={() => setErrorDialogOpen(false)}
             >
-              Compute
+              Close
             </button>
-          </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-          {matrixARaw && (
-            <div className='mb-2 text-sm'>Raw A (user-entered values)</div>
-          )}
-          {matrixARaw && (
-            <div className='overflow-auto mb-4'>
-              <table className='table-auto border-collapse'>
-                <tbody>
-                  {matrixARaw.map((row, i) => (
-                    <tr key={i}>
-                      {row.map((v, j) => (
-                        <td key={j} className='border p-1 text-xs'>
-                          {v.toFixed(4)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+      <IngredientsSection
+        components={components}
+        ingredients={ingredients}
+        setIngredients={setIngredients}
+        nextId={nextId}
+        setNextId={setNextId}
+        updateIngredient={updateIngredient}
+        removeIngredient={removeIngredient}
+        addIngredient={addIngredient}
+        finishIngredients={finishIngredients}
+      />
 
-          {matrixA && vectorB && (
-            <div className='overflow-auto'>
-              <div className='text-sm mb-2'>Normalized system (A · x = b)</div>
-              <div className='flex gap-4'>
-                <table className='table-auto border-collapse'>
-                  <tbody>
-                    {matrixA.map((row, i) => (
-                      <tr key={i} className='align-top'>
-                        {row.map((v, j) => (
-                          <td key={j} className='border p-1 text-xs'>
-                            {v.toFixed(4)}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                <div className='flex flex-col justify-center text-lg font-semibold'>
-                  ·
-                </div>
-
-                <div className='flex flex-col'>
-                  <div className='text-sm mb-1'>x (ingredients)</div>
-                  <table className='table-auto border-collapse'>
-                    <tbody>
-                      {ingredients.map((ing, i) => (
-                        <tr key={i}>
-                          <td className='border p-1 text-xs'>
-                            {ing.name || `x${i + 1}`}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className='flex flex-col justify-center text-lg font-semibold'>
-                  =
-                </div>
-
-                <div className='flex flex-col'>
-                  <div className='text-sm mb-1'>b (targets)</div>
-                  <table className='table-auto border-collapse'>
-                    <tbody>
-                      {vectorB.map((v, i) => (
-                        <tr key={i}>
-                          <td className='border p-1 text-xs font-semibold'>
-                            {v.toFixed(4)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {solution && (
-            <div className='mt-3'>
-              <h4 className='font-medium'>Solution (ingredient amounts)</h4>
-              <ul className='list-disc pl-5 text-sm'>
-                {solution.map((v, i) => (
-                  <li key={i}>
-                    {ingredients[i]?.name || `ing${i + 1}`}: {v.toFixed(6)}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
+      {productAmount !== null && (
+        <ProductDetailsSection
+          productAmount={productAmount}
+          desiredComp={desiredComp}
+          setDesiredComp={setDesiredComp}
+          components={components}
+          onDesiredChange={onDesiredChange}
+          showSystem={showSystem}
+          setShowSystem={setShowSystem}
+          assembleModel={assembleModel}
+        />
       )}
+
+      <SystemEquationsSection
+        showSystem={showSystem}
+        matrixARaw={matrixARaw}
+        matrixA={matrixA}
+        vectorB={vectorB}
+        ingredients={ingredients}
+      />
+
+      <CreateModelSection
+        productAmount={productAmount}
+        modelName={modelName}
+        setModelName={setModelName}
+        solver={solver}
+        setSolver={setSolver}
+        assembleModel={assembleModel}
+        computeModel={computeModel}
+        matrixARaw={matrixARaw}
+        matrixA={matrixA}
+        vectorB={vectorB}
+        solution={solution}
+        ingredients={ingredients}
+      />
 
       <div className='text-sm text-gray-600'>
         Next: when you confirm desired composition I can assemble the equations

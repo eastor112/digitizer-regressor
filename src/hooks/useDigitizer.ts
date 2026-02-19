@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Point, DataPoint, Regression, Line, StateType, ST } from '@/lib/types';
 
-export function useDigitizer() {
+export function useDigitizer(onError?: (message: string) => void) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -187,7 +187,7 @@ export function useDigitizer() {
   const calculateRegression = () => {
     const currentLine = lines.find((l) => l.id === currentLineId);
     if (!currentLine || currentLine.points.length < 2) {
-      alert('Missing points in current line');
+      onError?.('Missing points in current line');
       return;
     }
     const dataPoints = currentLine.points;
