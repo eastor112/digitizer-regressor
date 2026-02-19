@@ -1,0 +1,23 @@
+import { Link } from 'react-router-dom';
+
+export default function Home() {
+  return (
+    <div className="flex items-center justify-center w-screen h-screen bg-gray-900">
+      <div className="space-y-6 text-center">
+        <h1 className="text-4xl font-bold text-white">Useful Tools</h1>
+        <p className="text-gray-300">Select a tool to get started</p>
+        <div className="flex gap-4 justify-center">
+          <Link
+            to="/digitizer"
+            className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500"
+          >
+            Go to Digitizer
+          </Link>
+          <button className="px-6 py-3 bg-gray-700 text-white rounded-lg" disabled>
+            Other apps (coming soon)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
