@@ -13,6 +13,12 @@ export default function Home() {
           >
             Go to Digitizer
           </Link>
+          <Link
+            to="/exact-mix"
+            className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500"
+          >
+            Go to Exact Mix
+          </Link>
           <button className="px-6 py-3 bg-gray-700 text-white rounded-lg" disabled>
             Other apps (coming soon)
           </button>
