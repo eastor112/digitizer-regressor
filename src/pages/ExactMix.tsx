@@ -11,15 +11,15 @@ import ComponentsSection from '@/components/exactMix/ComponentsSection';
 import IngredientsSection from '@/components/exactMix/IngredientsSection';
 import ProductDetailsSection from '@/components/exactMix/ProductDetailsSection';
 import SystemEquationsSection from '@/components/exactMix/SystemEquationsSection';
-import CreateModelSection from '@/components/exactMix/CreateModelSection';
 
 type Ingredient = {
   id: number;
   name: string;
-  composition: Record<string, number>; // key: component name -> value (e.g. percent or fraction)
+  composition: Record<string, number>;
 };
 
 type ComponentDef = { name: string; units: string };
+
 
 export default function ExactMix() {
   const [components, setComponents] = useState<ComponentDef[]>([]);
@@ -37,15 +37,10 @@ export default function ExactMix() {
   const [newCompUnits, setNewCompUnits] = useState<
     'percent' | 'g/100g' | 'g/kg' | 'g/g' | 'mg/kg' | 'ppb' | 'unitless'
   >('percent');
-  const [modelName, setModelName] = useState('');
-  const [solver, setSolver] = useState<'exact' | 'least-squares' | 'nnls'>(
-    'exact',
-  );
   const [matrixA, setMatrixA] = useState<number[][] | null>(null);
-  const [matrixARaw, setMatrixARaw] = useState<number[][] | null>(null);
   const [vectorB, setVectorB] = useState<number[] | null>(null);
   const [solution, setSolution] = useState<number[] | null>(null);
-  const [productAmountDialogOpen, setProductAmountDialogOpen] = useState(false);
+  const [matrixAInv, setMatrixAInv] = useState<number[][] | null>(null);
   const [productAmountInput, setProductAmountInput] = useState('');
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [errorDialogMessage, setErrorDialogMessage] = useState('');
@@ -98,13 +93,6 @@ export default function ExactMix() {
     setIngredients((s) => s.filter((r) => r.id !== id));
   }
 
-  function finishIngredients() {
-    setProductAmountInput(
-      productAmountDisplay !== null ? String(productAmountDisplay) : '',
-    );
-    setProductAmountDialogOpen(true);
-  }
-
   function confirmProductAmount() {
     const ans = productAmountInput;
     if (!ans) {
@@ -135,11 +123,37 @@ export default function ExactMix() {
     }
     setProductAmount(grams);
     setProductAmountDisplay(n);
-    setProductAmountDialogOpen(false);
   }
 
   function onDesiredChange(component: string, value: number) {
     setDesiredComp((d) => ({ ...d, [component]: value }));
+  }
+
+  function invertMatrix(A: number[][]) {
+    const n = A.length;
+    const I = Array.from({ length: n }, (_, i) =>
+      Array(n)
+        .fill(0)
+        .map((_, j) => (i === j ? 1 : 0)),
+    );
+    const augmented = A.map((row, i) => [...row, ...I[i]]);
+    for (let i = 0; i < n; i++) {
+      let maxRow = i;
+      for (let k = i + 1; k < n; k++) {
+        if (Math.abs(augmented[k][i]) > Math.abs(augmented[maxRow][i]))
+          maxRow = k;
+      }
+      [augmented[i], augmented[maxRow]] = [augmented[maxRow], augmented[i]];
+      const pivot = augmented[i][i];
+      for (let j = 0; j < 2 * n; j++) augmented[i][j] /= pivot;
+      for (let r = 0; r < n; r++) {
+        if (r === i) continue;
+        const factor = augmented[r][i];
+        for (let c = 0; c < 2 * n; c++)
+          augmented[r][c] -= factor * augmented[i][c];
+      }
+    }
+    return augmented.map((row) => row.slice(n));
   }
 
   function assembleModel() {
@@ -158,7 +172,6 @@ export default function ExactMix() {
     const compNames = compDefs.map((c) => c.name);
     const m = compNames.length + 1; // +1 for total
     const n = ingredients.length;
-    const Araw: number[][] = Array.from({ length: m }, () => Array(n).fill(0));
     const Anorm: number[][] = Array.from({ length: m }, () => Array(n).fill(0));
 
     function unitToPerGramScale(unit: string) {
@@ -186,13 +199,11 @@ export default function ExactMix() {
       const scale = unitToPerGramScale(unit);
       for (let j = 0; j < n; j++) {
         const raw = ingredients[j].composition[comp] ?? 0;
-        Araw[i][j] = raw;
         Anorm[i][j] = raw * scale;
       }
     }
     // total row
     for (let j = 0; j < n; j++) {
-      Araw[m - 1][j] = 1;
       Anorm[m - 1][j] = 1;
     }
 
@@ -207,7 +218,6 @@ export default function ExactMix() {
     }
     bnorm.push(productAmount);
 
-    setMatrixARaw(Araw);
     setMatrixA(Anorm);
     setVectorB(bnorm);
     setSolution(null);
@@ -263,40 +273,31 @@ export default function ExactMix() {
       setErrorDialogOpen(true);
       return;
     }
+    setMatrixAInv(null);
+    setSolution(null);
     const A = matrixA;
     const b = vectorB;
     const rows = A.length;
     const cols = A[0].length;
     try {
-      if (solver === 'exact') {
-        if (rows !== cols) {
-          setErrorDialogMessage(
-            'Exact solver requires a square system (components+total === ingredients)',
-          );
-          setErrorDialogOpen(true);
-          return;
-        }
+      if (rows === cols) {
+        // Sistema cuadrado: solución exacta
         const sol = solveLinear(A, b);
         setSolution(sol);
-        return;
-      }
-      if (solver === 'least-squares') {
-        // x = (A^T A)^{-1} A^T b
+        setMatrixAInv(invertMatrix(A));
+      } else {
+        // Sistema sobredeterminado o subdeterminado: mínimos cuadrados
+        // x = (A^T A)^{-1} A^T b  (pseudo-inversa)
         const At = transpose(A);
         const AtA = matMul(At, A);
-        const Atb = matMul(
-          At,
-          b.map((v) => [v]),
-        );
-        // convert Atb to vector
+        const Atb = matMul(At, b.map((v) => [v]));
         const AtbVec = Atb.map((r) => r[0]);
         const sol = solveLinear(AtA, AtbVec);
         setSolution(sol);
-        return;
-      }
-      if (solver === 'nnls') {
-        setErrorDialogMessage('NNLS solver not implemented yet');
-        setErrorDialogOpen(true);
+        // pseudo-inversa: (A^T A)^{-1} A^T
+        const AtAInv = invertMatrix(AtA);
+        const pseudoInv = matMul(AtAInv, At);
+        setMatrixAInv(pseudoInv);
       }
     } catch (err: any) {
       setErrorDialogMessage(
@@ -320,53 +321,6 @@ export default function ExactMix() {
         addComponent={addComponent}
         removeComponent={removeComponent}
       />
-
-      {/* Product amount dialog */}
-      <Dialog
-        open={productAmountDialogOpen}
-        onOpenChange={setProductAmountDialogOpen}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Set product amount</DialogTitle>
-            <DialogDescription>
-              Enter how much product will be prepared (in chosen units).
-            </DialogDescription>
-          </DialogHeader>
-          <div className='mt-2 flex gap-2'>
-            <input
-              value={productAmountInput}
-              onChange={(e) => setProductAmountInput(e.target.value)}
-              className='border px-2 py-1 rounded flex-1'
-              placeholder='Amount'
-            />
-            <select
-              value={productUnits}
-              onChange={(e) => setProductUnits(e.target.value as any)}
-              className='border px-2 py-1 rounded'
-            >
-              <option value='g'>g</option>
-              <option value='kg'>kg</option>
-              <option value='oz'>oz</option>
-              <option value='lb'>lb</option>
-            </select>
-          </div>
-          <DialogFooter className='mt-4'>
-            <button
-              className='px-3 py-1 bg-gray-200 rounded mr-2'
-              onClick={() => setProductAmountDialogOpen(false)}
-            >
-              Cancel
-            </button>
-            <button
-              className='px-3 py-1 bg-blue-600 text-white rounded'
-              onClick={confirmProductAmount}
-            >
-              Confirm
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Error dialog */}
       <Dialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
@@ -395,13 +349,16 @@ export default function ExactMix() {
         updateIngredient={updateIngredient}
         removeIngredient={removeIngredient}
         addIngredient={addIngredient}
-        finishIngredients={finishIngredients}
       />
 
-      {productAmountDisplay !== null && (
+      {ingredients.length > 0 && (
         <ProductDetailsSection
           productAmountDisplay={productAmountDisplay}
           productUnits={productUnits}
+          setProductUnits={setProductUnits}
+          productAmountInput={productAmountInput}
+          setProductAmountInput={setProductAmountInput}
+          confirmProductAmount={confirmProductAmount}
           desiredComp={desiredComp}
           setDesiredComp={setDesiredComp}
           components={components}
@@ -414,25 +371,12 @@ export default function ExactMix() {
 
       <SystemEquationsSection
         showSystem={showSystem}
-        matrixARaw={matrixARaw}
         matrixA={matrixA}
         vectorB={vectorB}
         ingredients={ingredients}
-      />
-
-      <CreateModelSection
-        productAmount={productAmount}
-        modelName={modelName}
-        setModelName={setModelName}
-        solver={solver}
-        setSolver={setSolver}
-        assembleModel={assembleModel}
-        computeModel={computeModel}
-        matrixARaw={matrixARaw}
-        matrixA={matrixA}
-        vectorB={vectorB}
         solution={solution}
-        ingredients={ingredients}
+        matrixAInv={matrixAInv}
+        computeModel={computeModel}
       />
 
       <div className='text-sm text-gray-600'>

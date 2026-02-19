@@ -17,7 +17,6 @@ interface IngredientsSectionProps {
   updateIngredient: (id: number, patch: Partial<Ingredient>) => void;
   removeIngredient: (id: number) => void;
   addIngredient: () => void;
-  finishIngredients: () => void;
 }
 
 export default function IngredientsSection({
@@ -26,7 +25,6 @@ export default function IngredientsSection({
   updateIngredient,
   removeIngredient,
   addIngredient,
-  finishIngredients,
 }: IngredientsSectionProps) {
   return (
     <section className='mb-6 bg-white p-4 rounded shadow'>
@@ -92,12 +90,6 @@ export default function IngredientsSection({
           onClick={addIngredient}
         >
           Add ingredient
-        </button>
-        <button
-          className='px-4 py-2 bg-indigo-600 text-white rounded'
-          onClick={finishIngredients}
-        >
-          Done ingredients
         </button>
       </div>
     </section>
